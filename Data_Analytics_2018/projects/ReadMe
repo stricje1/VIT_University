@@ -1,0 +1,5 @@
+The projects in this directory are for applied data anlytics and are tailored for R and Python. Dat for the projects are located in the data directory: VIT_University/Data_Analytics_2018/data. The projects are not trivial and are designed for junior and senior undergrads or first-year graduate students. Project teams should be comprised of no more than two students and a faculty advisor. The products produced include a white paper that would be a good starting point for a conference paper.
+So far, the projects include:
+1. Credit Default Prediction Model - Machine Learning Models
+2. Culturally Relevant Sentiment Analysis - Sentiment or Topic Analysis
+3. American Politics Sentiment Analysis - Sentiment Analysis
