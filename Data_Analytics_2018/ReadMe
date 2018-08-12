@@ -1,0 +1,12 @@
+ReadMe Data Analytics (2018)
+Data Analytics is taught at the Vellore Institute of Technology in Vellore, India, by visiting professor Dr. Jeffrey Strickland. This is the second interation of the course that began in 2016 at Dr. Strickland's inaugaral visit, under the invitation of Dr. Ch. Aswani Kumar, Professor & Dean, School of Information Technology & Engineering. Dr. Kumar, a great innovator, has "internationalized" the programs of study at VIT and has visited the USA upon invitation as well.
+
+Data Analytics is comprised of 45 contact hours and in its second iteration will feature student projects under faculty supervision, which will result in conference papers for those students involved. The structure of this repository should be slef-evident, but here is a discription:
+
+1. PPT: PowerPoint lecture presentations
+2. Code: Code used during R and Python demonstration throughout the lectures
+3. Data: Data called by the code for analysis and modeling
+4. Projects: Student applied project descriptions and requirements
+5. Tidy_text: Corpuses of text used for text analytics
+
+The contents of this course are liscensed under the GNU Lesser General Public License, version 3, 29 June 2007. 
