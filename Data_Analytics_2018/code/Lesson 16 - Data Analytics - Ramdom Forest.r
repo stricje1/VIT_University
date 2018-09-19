@@ -3,10 +3,8 @@
 #------------------------------------------
 # Load library
 library(randomForest)
-# Help on ramdonForest package and function
-library(help=randomForest)
-help(randomForest)
 library(colorspace)
+library(reshape)
 #------------------------------------------
 #Some of the commonly used parameters of randomForest functions are
 ##x : Random Forest Formula
@@ -26,15 +24,16 @@ data(pbc, package = "randomForestSRC")
 summary(pbc)
 #Transform variable values: years to days; 0-1 to T-F
 pbc1<-pbc
-pbc1$Years<-pbc1$days/365
-pbc1$Age<-pbc1$age/365
-pbc$Status <- ifelse(pbc$status>0,"T","F")
-pbc$status
-pbc1$status <- pbc$Status
+pbc1$Years<-pbc$days/365
+pbc1$age<-pbc$age/365
+pbc1$Status <- NULL
+pbc1$status
+
 #Get transformed data
-pbc2<-pbc1[,2:21]
+pbc2<-pbc1[,2:20]
 head(pbc2)
 pbc2
+
 #Reshape continuous variable data for exploratory analysis
 dtb1<- melt(pbc2, id.vars=c("Age","Years","status"))
 dtb2<- melt(pbc2, id.vars=c("bili","Years","status"))
@@ -46,6 +45,7 @@ dtb7<- melt(pbc2, id.vars=c("chol","Years","status"))
 dtb8<- melt(pbc2, id.vars=c("copper","Years","status"))
 dtb9<- melt(pbc2, id.vars=c("trig","Years","status"))
 dtb10<- melt(pbc2, id.vars=c("platelet","Years","status"))
+
 #plot contuinuous variables
 gg1<-ggplot(data=dtb1, aes(x=Years, y=Age)) + geom_point(aes(x=Years, color=status)) +
   scale_fill_brewer(type="seq", palette = "Set1")
@@ -67,6 +67,7 @@ gg9<-ggplot(data=dtb9, aes(x=Years, y=trig)) + geom_point(aes(x=Years, color=sta
   scale_fill_brewer(type="seq", palette = "Set1")
 gg10<-ggplot(data=dtb10, aes(x=Years, y=platelet)) + geom_point(aes(x=Years, color=status)) +
   scale_fill_brewer(type="seq", palette = "Set1")
+
 #show multiple pots in a window
 library(gridExtra)
 grid.arrange(gg1,gg2,gg3,gg4,gg5,gg6,nrow=2)
@@ -116,10 +117,10 @@ plot(gg_survival(interval = "Years",censor = "status",
 library(reshape2)
 dta <- melt(pbc2, id.vars=c("bili","Years")) 
 dtb <- melt(pbc2, id.vars=c("Years","status")) 
-head(gg_dtb)
+head(dtb)
 
 ## Using shiny GUI for colorspace
-choose_palette("tcltk")
+#choose_palette("tcltk")
 
 ## Analog to: choose_palette(gui = "shiny")
 ggplot(dta,  aes(x=bili, y=Years, color=variable)) + geom_point(alpha=.4) + geom_rug(data=dta) + 
@@ -145,7 +146,11 @@ rfsrc_pbc2
 
 #The print.rfsrc function returns information on how the random forest was grown. Here the family = "surv" forest has ntree = 1000 trees (the default ntree argument). 
 #We used nsplit = 10 random split points to select random split rule, instead of an optimization on each variable at each split for performance reasons.
-# Predict survival for 106 patients not in randomized trial 
+# Predict survival for 106 patients not in randomized trial
+
+pbc.test$status<-ifelse(pbc.test$status == "T",1,0)
+head(pbc.test)
+
 rfsrc_pbc_test <- predict(rfsrc_pbc, 
                           newdata = pbc.test, 
                           na.action = "na.impute") 
@@ -173,36 +178,37 @@ plot(rfsrc_pbc, lbls = st.labs) +
   scale_fill_brewer(palette = "Set1")
 
 # Return an object with both minimal depth and vimp measures
-varsel_pbc <- var.select(rfsrc_pbc1) 
+varsel_pbc <- var.select(rfsrc_pbc) 
 ggMindepth <- gg_minimal_depth(varsel_pbc, lbls = Years) 
 print(ggMindepth)
 plot(ggMindepth)
+
 # both minimal depth and VIMP
 plot(gg_minimal_vimp(ggMindepth)) + 
-  geom_vline(aes(xintercept = c(1, 3)), linetype = "dashed") + 
-  coord_cartesian(x = c(0, 4))
+
 # Get the minimal depth selected variables 
 xvar <- varsel_pbc$topvars 
 xvar
 # Data generation
 ggrf <- gg_variable(rfsrc_pbc, time = c(1, 3), 
                     time.labels = c("1 Year", "3 Years")) 
+
 # Plot the bilirubin variable dependence plot
 plot(ggrf, xvar = "bili", se = .95, alpha = .3) + 
   labs(y = "Survival", x = "bili") + 
-  theme(legend.position = "none") + 
-  scale_color_manual(values = "status", labels = "status") + 
-  scale_shape_manual(values = "Years", labels = "Years")+ 
-  coord_cartesian(y = c(-.01,1.01))
+  theme(legend.position = "none")
+
 # Pull the categorical variables 
 xvar.cat <- c("edema", "stage") 
 xvar <- xvar[-which(xvar %in% xvar.cat)]
+
 # plot the next 5 continuous variable dependence plots. 
 plot(ggrf, xvar = xvar[2:6], panel = TRUE, 
      se = FALSE, alpha = .3, 
      method = "glm", formula = y~poly(x,2)) + 
   labs(y = "Survival") + 
   theme(legend.position = "none") #optional
+
 # Variable dependence plots for categorical variables are constructed using boxplots to show the distribution of the predictions within each category.
 plot(ggrf, xvar = xvar.cat, panel = TRUE, notch = TRUE, alpha = .3) + 
   labs(y = "Survival") + scale_fill_gradientn(colours = colorspace::rainbow_hcl(17))
@@ -239,10 +245,10 @@ plot.variable(rfsrc_pbc, surv.type = "surv",
 
 # Convert all partial plots to gg_partial objects 
 gg_dta <- lapply(partial_pbc, gg_partial)
+
 # Combine the objects to get multiple time curves along variables on a single figure. 
 pbc_ggpart <- combine.gg_partial(gg_dta[[1]], gg_dta[[2]], lbls = c("1 Year", "3 Years")) 
-pbc_ggpart2 <- combine.gg_partial(ggRandomForests::gg_partial(gg_dta[[1]], gg_dta[[2]]), 
-                                 lbls = c("1 Year", "3 Years")) 
+
 plot(pbc_ggpart[["bili"]], se=TRUE) + 
   theme(legend.position = c(.9, .85)) + 
   labs(y = "Survival", 
@@ -268,7 +274,7 @@ names(ggpart) <- c("edema", "stage")
 class(ggpart) <- c("gg_partial_list", class(ggpart)) 
 plot(ggpart$edema, panel=TRUE, notch = TRUE, alpha = .3) + 
   labs(x = "", y = "Survival (%)", color="Time", shape="Time") + 
-  scale_color_brewer(palette = "Set2") + 
+  scale_color_brewer(palette = "Set1") + 
   theme(legend.position = c(.35, .1)) 
 
 # The gg_interaction function wraps the find.interaction matrix for use with the provided S3 plot and print functions
@@ -287,20 +293,23 @@ var_dep <- plot(ggvar, xvar = "bili", method = "glm", alpha = .5, se = FALSE) +
   scale_shape(solid=TRUE) + 
   coord_cartesian(y = c(-.01,1.01)) 
 var_dep 
+
 # conditional dependence of survival against bilirubin, versus other categorical covariates, say edema and stage 
 var_dep + 
   facet_grid(edema~stage)
+
 # Find intervals with similar number of observations. 
 copper_cts <-quantile_pts(ggvar$copper, groups = 6, intervals = TRUE)
 
 # Create the conditional groups and add to the gg_variable object 
 copper_grp <- cut(ggvar$copper, breaks = copper_cts) 
 ggvar$copper_grp <- copper_grp 
+
 # Adjust naming for facets 
 levels(ggvar$copper_grp) <- paste("copper = ",levels(copper_grp), sep = "") 
-# plot.gg_variable 
 
-var_dep <- plot(ggvar$copper, xvar = "bili", method = "glm", alpha = .5, se = FALSE) + 
+# plot.gg_variable 
+var_dep <- plot(ggvar, xvar = "bili", method = "glm", alpha = .5, se = FALSE) + 
   labs(y = "copper", x = "bili") + 
   theme(legend.position = c(.35, .1)) + 
   scale_color_brewer(palette = "Set2") + 
@@ -314,7 +323,7 @@ ggvar$chol_grp <- chol_grp
 # Adjust naming for facets 
 levels(ggvar$chol_grp) <- paste("chol = ",levels(chol_grp), sep = "") 
 # plot.gg_variable 
-var_dep <- plot(ggvar$chol, xvar = "bili", method = "glm", alpha = .5, se = FALSE) + 
+var_dep <- plot(ggvar, xvar = "bili", method = "glm", alpha = .5, se = FALSE) + 
   labs(y = "cholesterol", x = "bili") + 
   theme(legend.position = c(.35, .1)) + 
   scale_color_brewer(palette = "Set2") + 
@@ -382,7 +391,6 @@ sample.ind <- sample(2,
                      nrow(bank),
                      replace = T,
                      prob = c(0.5,0.5))
-sample.ind <- sample(2, 22000, replace=F,prop=NULL)
 cross.sell.dev <- bank[sample.ind==1,]
 cross.sell.val <- bank[sample.ind==2,]
 
@@ -432,7 +440,7 @@ var.imp <- data.frame(importance(cross.sell.rf,
            type=2))
 # make row names as columns
 var.imp$Variables <- row.names(var.imp)
-var.imp[order(var.imp$IncNodePurity,decreasing = T),]
+var.imp[order(var.imp,decreasing = T),]
 #------------------------------------------
 #Based on Random Forest variable importance, the variables could be selected for any other predictive modelling techniques or machine learning.
 #------------------------------------------
@@ -504,7 +512,7 @@ for (i in 1:4) plot(sort(fgl.rf$importance[,i], dec = TRUE), type = "h", main = 
 # Random Forest in R example with Low Birth Weight
 #******************************************************************************
 
-lwt<-read.csv(file="C:/Users/Strickland/Documents/VIT University/lowbwt.csv",header = T)
+lwt<-read.csv(file="C:/Users/jeff/Documents/VIT_Course_Material/Data_Analytics_2018/data/lowbwt.csv",header = T)
 lwt.rf<- randomForest(LOW ~ BIRTH+AGE+RACE+LWT+SMOKE+BWT, data = lwt, mtry = 2, importance = TRUE, do.trace = 100)
 print(lwt.rf)
 lwt.rf$importance
@@ -548,12 +556,10 @@ table(predict(iris_rf),trainData$Species)
 print(iris_rf)
 
 plot(iris_rf)
-plot of chunk unnamed-chunk-4
 
 importance(iris_rf)
 
 varImpPlot(iris_rf)
-plot of chunk unnamed-chunk-4
 
 #Try to build random forest for testing data
 
@@ -562,16 +568,16 @@ table(irisPred, testData$Species)
 
 #Try to see the margin, positive or negative, if positif it means correct classification
 
-plot(margin(iris_rf,testData$Species))
+plot(margin(testData$Species))
+
 ## Loading required package: RColorBrewer
 ## Warning: package 'RColorBrewer' was built under R version 3.1.1
-#plot of chunk unnamed-chunk-6
 
 #Try to tune Random Forest
 
 tune.rf <- tuneRF(iris[,-5],iris[,5], stepFactor=0.5)
 
-plot of chunk unnamed-chunk-7
+#plot of chunk unnamed-chunk-7
 
 print(tune.rf)
 
@@ -581,16 +587,12 @@ print(tune.rf)
 # saves a sample submission, and plots the relative importance
 # of the variables in making predictions
 
-# Download 1_random_forest_r_submission.csv from the output below
-# and submit it through https://www.kaggle.com/c/titanic-gettingStarted/submissions/attach
-# to enter this getting started competition!
-
 library(ggplot2)
 library(randomForest)
 
 set.seed(1)
-train <- read.csv("../input/train.csv", stringsAsFactors=FALSE)
-test  <- read.csv("../input/test.csv",  stringsAsFactors=FALSE)
+train <- read.csv("C:/Users/jeff/Documents/VIT_Course_Material/Data_Analytics_2018/data/titanic_train.csv", stringsAsFactors=FALSE)
+test  <- read.csv("C:/Users/jeff/Documents/VIT_Course_Material/Data_Analytics_2018/data/titanic_test.csv",  stringsAsFactors=FALSE)
 
 extractFeatures <- function(data) {
   features <- c("Pclass",
@@ -628,3 +630,4 @@ p <- ggplot(featureImportance, aes(x=reorder(Feature, Importance), y=Importance)
      theme(plot.title=element_text(size=18))
 
 ggsave("2_feature_importance.png", p)
+p
